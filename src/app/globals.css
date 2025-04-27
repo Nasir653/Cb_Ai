@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: #ffffff;
+  font-family: "Inter", sans-serif;
+  height: 100%;
+}
+
+.sidebar-bg-color {
+  background-color: #f4f3ee;
+}
+
+html {
+  height: 100%;
+}
+
+.border-color-common {
+  border-color: rgb(255 22 22 / 10%);
+}
+
+* {
+  scrollbar-color: #ececec transparent;
+}
+
+:has(.sidebarActive) .dashboard-header .open-sidebar-btn {
+  transform: rotate(180deg);
+  transition: all 0.3s;
+}
+
+::selection {
+  color: #fff;
+  background: #f58533;
+}
