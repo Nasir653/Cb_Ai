@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useContext, useEffect, useState } from 'react';
-import { GlobalContext } from '../../../../provider/context';
+import { GlobalContext } from '../../../provider/context';
 
 export default function SearchOtherTools() {
 
@@ -64,7 +64,7 @@ export default function SearchOtherTools() {
                             </option>
                         ))
                     ) : (
-                        <option value="">No tools available</option>  
+                        <option value="">No tools available</option>
                     )}
                 </select>
 

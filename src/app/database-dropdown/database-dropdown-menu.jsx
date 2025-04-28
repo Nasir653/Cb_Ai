@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { GlobalContext } from "../../../provider/context";
+import { GlobalContext } from "../../provider/context";
 
 export default function DatabaseDropdownMenu() {
   const { toggleSidebar, fetchDatabases } = useContext(GlobalContext);
@@ -104,10 +104,10 @@ export default function DatabaseDropdownMenu() {
             {loading
               ? "Loading..."
               : error
-              ? "Error"
-              : selectedDatabase
-              ? selectedDatabase.label
-              : "Select Database"}
+                ? "Error"
+                : selectedDatabase
+                  ? selectedDatabase.label
+                  : "Select Database"}
           </div>
           {!loading && !error && (
             <svg
@@ -135,9 +135,8 @@ export default function DatabaseDropdownMenu() {
               databases.map((db) => (
                 <li
                   key={db.id}
-                  className={`px-4 py-2 hover:bg-[#f4f3ee] cursor-pointer font-medium rounded-lg ${
-                    selectedDatabase?.id === db.id ? "bg-[#f4f3ee]" : ""
-                  }`}
+                  className={`px-4 py-2 hover:bg-[#f4f3ee] cursor-pointer font-medium rounded-lg ${selectedDatabase?.id === db.id ? "bg-[#f4f3ee]" : ""
+                    }`}
                   onClick={() => handleDatabaseSelect(db.id)}
                 >
                   <span className="text-sm leading-none font-normal text-gray-700">

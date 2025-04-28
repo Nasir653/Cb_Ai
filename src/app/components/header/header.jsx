@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import DatabaseDropdownMenu from '@/app/database-dropdown/database-dropdown-menu';
 import UserProfile from '@/app/user-profile/user-profile';
-import { GlobalContext } from '../../../../provider/context';
+import { GlobalContext } from '../../../provider/context';
 // import { useGlobalContext } from '../../../../provider/context'
 
 export default function Header() {

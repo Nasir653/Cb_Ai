@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { GlobalContextProvider } from "../../provider/context";
+import { GlobalContextProvider } from "../provider/context";
 
 import DashboardSidebar from "./components/dashboard-sidebar/dashboard-sidebar";
 import Header from "./components/header/header";

@@ -1,38 +1,29 @@
 "use client";
-
-import Image from "next/image";
-import React, { useState, useEffect, useRef, useContext } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { GlobalContext } from "../../../../provider/context";
+import { useGlobalContext } from '../../../provider/context';
+import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
+import axios from 'axios';
 
 export default function DashboardSidebar() {
     const router = useRouter();
-    const pathname = usePathname();
-    const { sidebarToggleBtn, FetchAllSessions, FetchSessionById, store } = useContext(GlobalContext);
+    const {
+        store,
+        fetchAllSessions,
+        fetchSessionById,
+        createNewSession,
+        loading,
+        sidebarToggleBtn
+    } = useGlobalContext();
+
     const [dropdownOpen, setDropdownOpen] = useState(null);
-    const [sessions, setSessions] = useState([]);
     const dropdownRef = useRef(null);
+    const buttonRefs = useRef([]);
 
-    // Load all chat sessions on mount
     useEffect(() => {
-        handlerFetchSessions();
-    }, []);
+        fetchAllSessions();
+    }, [fetchAllSessions]);
 
-    const handlerFetchSessions = async () => {
-        try {
-            const res = await FetchAllSessions();
-            if (res?.data) {
-                const sorted = [...res.data].sort((a, b) =>
-                    new Date(b.attributes.createdAt) - new Date(a.attributes.createdAt)
-                );
-                setSessions(sorted);
-            }
-        } catch (err) {
-            console.error("Failed to fetch sessions:", err);
-        }
-    };
-
-    // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event) {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -43,95 +34,174 @@ export default function DashboardSidebar() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const toggleDropdown = (index) => {
-        setDropdownOpen(dropdownOpen === index ? null : index);
+    const handleNewChat = async () => {
+        try {
+            await createNewSession();
+        } catch (error) {
+            console.error("Failed to create new session:", error);
+        }
     };
 
     const handleSessionClick = async (sessionId) => {
         try {
-            router.push(`/${sessionId}`, undefined, { shallow: true });
-            await FetchSessionById(sessionId);
-        } catch (err) {
-            console.error("Failed to fetch session by id:", err);
-            router.push(pathname);
+            await fetchSessionById(sessionId);
+        } catch (error) {
+            console.error("Failed to load session:", error);
         }
     };
 
-    const handleNewChat = () => {
-        // Force a full page navigation to root with reload
-        window.location.href = "/";
+    const deleteSession = async (sessionId, index) => {
+        try {
+            await axios.delete(`http://localhost:1337/api/chat-sessions/${sessionId}`);
+            fetchAllSessions(); // Refresh the list
+            if (store.currentSessionId === sessionId) {
+                await createNewSession();
+            }
+            setDropdownOpen(null);
+        } catch (error) {
+            console.error("Failed to delete session:", error);
+        }
+    };
+
+    const toggleDropdown = (index, sessionId) => {
+        setDropdownOpen(dropdownOpen === index ? null : index);
     };
 
     return (
         <div className="flex">
-            <div
-                className={`sidebar-bg-color transition-all duration-300 ${sidebarToggleBtn ? "w-[260px]" : "w-0 opacity-0 overflow-hidden sidebarActive"
-                    }`}
-            >
+            <div className={`sidebar-bg-color transition-all duration-300 ${sidebarToggleBtn ? "w-[260px]" : "w-0 opacity-0 overflow-hidden sidebarActive"
+                }`}>
                 <div className="h-full flex flex-col">
-                    <nav className="flex h-full w-full flex-col pl-3" aria-label="Chat history">
+                    <nav className="flex h-full w-full flex-col px-3" aria-label="Chat history">
                         {/* Logo */}
-                        <div className="flex justify-between h-[80px] items-center pl-3">
-                            <Image src="/images/rodic-logo.png" alt="logo" width={80} height={90} />
+                        <div className="flex justify-between h-[80px] items-center">
+                            <Image
+                                src="/images/rodic-logo.png"
+                                alt="logo"
+                                width={80}
+                                height={90}
+                                className="object-contain"
+                            />
                         </div>
 
                         {/* New Chat Button */}
-                        <div className="mt-5 pl-3">
+                        <div className="mt-4 mb-2">
                             <button
                                 onClick={handleNewChat}
-                                className="flex items-center gap-2 px-2 py-2 text-md font-medium hover:text-orange-500 rounded-md transition-colors duration-300"
+                                disabled={loading}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-white bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 transition-all"
                             >
-                                New Chat
-                                <svg xmlns="http://www.w3.org/2000/svg" width={24} height={24} viewBox="0 0 24 24" className="text-[#242424]">
-                                    <g fill="currentColor">
-                                        <path d="M16 22.75H3c-.96 0-1.75-.79-1.75-1.75V8c0-4.42 2.33-6.75 6.75-6.75h8c4.42 0 6.75 2.33 6.75 6.75v8c0 4.42-2.33 6.75-6.75 6.75m-8-20C4.42 2.75 2.75 4.42 2.75 8v13c0 .14.11.25.25.25h13c3.58 0 5.25-1.67 5.25-5.25V8c0-3.58-1.67-5.25-5.25-5.25z" />
-                                        <path d="M7.95 17.75c-.47 0-.9-.17-1.22-.48-.38-.38-.55-.92-.46-1.50l.28-1.98c.06-.43.33-.98.64-1.29l5.19-5.19c1.78-1.78 3.33-.98 4.31 0 .77.77 1.12 1.58 1.04 2.39-.06.66-.41 1.28-1.04 1.92l-5.19 5.19c-.31.31-.85.58-1.29.65l-1.98.28c-.09 0-.19.01-.28.01m6.58-10c-.37 0-.7.24-1.08.61l-5.19 5.19c-.08.08-.2.33-.22.44l-.28 1.98c-.01.1 0 .19.04.23s.13.05.23.04l1.98-.28c.12-.02.36-.14.44-.22l5.19-5.19c.38-.38.58-.71.61-1.01.03-.34-.17-.74-.61-1.18-.44-.42-.79-.61-1.11-.61" />
-                                        <path d="M15.42 12.58c-.07 0-.14-.01-.20-.03a5.48 5.48 0 0 1-3.77-3.77c-.13-.48.23-.93.72-.8.4.11.81.12.92.52a3.99 3.99 0 0 0 2.73 2.73.755.755 0 0 1-.2 1.48" />
-                                    </g>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
                                 </svg>
+                                New Chat
                             </button>
                         </div>
 
-                        {/* Conversations */}
-                        <div className="mt-5 pl-3 flex-1 overflow-auto">
-                            <h3 className="text-md font-medium mb-2">Conversations</h3>
-                            <ol>
-                                {sessions.length > 0 ? (
-                                    sessions.map((session, idx) => {
+                        {/* Conversations List */}
+                        <div className="flex-1 overflow-y-auto">
+                            <h3 className="text-md font-medium mb-2 sticky top-0 bg-white py-2 z-10">
+                                Conversations
+                            </h3>
+
+                            {loading && !store.allSessions.length ? (
+                                <div className="flex justify-center py-2">
+                                    <div className="animate-pulse text-gray-500">
+                                        Loading sessions...
+                                    </div>
+                                </div>
+                            ) : (
+                                <ol className="space-y-1">
+                                    {store.allSessions.map((session, idx) => {
                                         const { id, attributes } = session;
                                         return (
-                                            <li key={id} className="group relative hover:bg-[#ebebeb] rounded-lg mb-1">
+                                            <li
+                                                key={id}
+                                                className={`group relative rounded-lg transition-colors ${store.currentSessionId === id
+                                                    ? 'bg-gradient-to-r from-orange-50 to-orange-100 border-l-4 border-orange-500'
+                                                    : 'hover:bg-gray-50'
+                                                    }`}
+                                            >
                                                 <div
                                                     onClick={() => handleSessionClick(id)}
-                                                    className="flex justify-between items-center p-2 h-9 text-sm rounded-lg cursor-pointer"
+                                                    className="flex items-center justify-between p-3 cursor-pointer"
                                                 >
-                                                    <span className="truncate text-gray-700">
-                                                        {attributes.label}
-                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className={`text-sm font-medium truncate ${store.currentSessionId === id
+                                                            ? 'text-orange-700'
+                                                            : 'text-gray-700'
+                                                            }`}>
+                                                            {attributes.label || `Session ${idx + 1}`}
+                                                        </p>
+                                                    </div>
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); toggleDropdown(idx); }}
-                                                        className="hidden group-hover:flex"
+                                                        ref={el => buttonRefs.current[idx] = el}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleDropdown(idx, id);
+                                                        }}
+                                                        className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-gray-200 transition-all"
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} viewBox="0 0 24 24" className="text-gray-500 group-hover:text-[#f58533]">
-                                                            <path fill="currentColor" d="M3 12a2 2 0 1 1 4 0 2 2 0 0 1-4 0m7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0m7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0" />
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            width="16"
+                                                            height="16"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            strokeWidth="2"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                        >
+                                                            <circle cx="12" cy="12" r="1"></circle>
+                                                            <circle cx="12" cy="5" r="1"></circle>
+                                                            <circle cx="12" cy="19" r="1"></circle>
                                                         </svg>
                                                     </button>
                                                 </div>
+
                                                 {dropdownOpen === idx && (
-                                                    <div ref={dropdownRef} className="absolute z-10 right-3 top-10 w-40 bg-white border rounded-md shadow-lg">
+                                                    <div
+                                                        ref={dropdownRef}
+                                                        className="absolute z-50 bg-white rounded-md shadow-lg border border-gray-200 py-1"
+                                                        style={{
+                                                            right: '1rem',
+                                                            top: `${buttonRefs.current[idx]?.offsetTop + buttonRefs.current[idx]?.offsetHeight}px`,
+                                                            minWidth: '120px'
+                                                        }}
+                                                    >
                                                         <ul>
-                                                            <li className="px-4 py-2 hover:bg-[#f4f3ee] cursor-pointer">Share</li>
-                                                            <li className="px-4 py-2 hover:bg-[#f4f3ee] cursor-pointer">Archive</li>
+                                                            <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                                                                Rename
+                                                            </li>
+                                                            <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                                                                Share
+                                                            </li>
+                                                            <li
+                                                                className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer"
+                                                                onClick={() => deleteSession(id, idx)}
+                                                            >
+                                                                Delete
+                                                            </li>
                                                         </ul>
                                                     </div>
                                                 )}
                                             </li>
                                         );
-                                    })
-                                ) : (
-                                    <li className="text-gray-500">No conversations yet.</li>
-                                )}
-                            </ol>
+                                    })}
+                                </ol>
+                            )}
                         </div>
                     </nav>
                 </div>
