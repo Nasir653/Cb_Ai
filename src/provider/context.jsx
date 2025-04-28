@@ -1,7 +1,9 @@
 "use client";
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
-import axios from "axios";
 import { useRouter } from "next/navigation";
+import { api } from "./AxiosInstance";
+
+
 
 export const GlobalContext = createContext();
 
@@ -22,93 +24,121 @@ export const GlobalContextProvider = ({ children }) => {
 
     const toggleSidebar = () => setSideToggleBtn(!sidebarToggleBtn);
 
-    const apiCall = async (url, method = 'get', data = null) => {
+    // Fetch all sessions sorted by createdAt (newest first)
+    const fetchAllSessions = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await axios({
-                method,
-                url: `http://localhost:1337/api${url}`,
-                data
-            });
-            return response.data;
+            setError(null);
+            const { data } = await api.get('/chat-sessions?sort=createdAt:desc');
+            setStore(prev => ({ ...prev, allSessions: data?.data || [] }));
+            return data;
         } catch (error) {
-            setError(error.message);
+            setError(error.response?.data?.message || error.message);
             throw error;
         } finally {
             setLoading(false);
         }
-    };
-
-    // Fetch all sessions sorted by createdAt (newest first)
-    const fetchAllSessions = useCallback(async () => {
-        const data = await apiCall('/chat-sessions?sort=createdAt:desc');
-        setStore(prev => ({ ...prev, allSessions: data?.data || [] }));
-        return data;
     }, []);
 
     const fetchDatabases = useCallback(async () => {
-        const data = await apiCall('/databases');
-        setStore(prev => ({ ...prev, databases: data?.data || [] }));
-        return data;
+        try {
+            setLoading(true);
+            setError(null);
+            const { data } = await api.get('/databases');
+            setStore(prev => ({ ...prev, databases: data?.data || [] }));
+            return data;
+        } catch (error) {
+            setError(error.response?.data?.message || error.message);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     const fetchModels = useCallback(async () => {
-        const data = await apiCall('/ai-models');
-        setStore(prev => ({ ...prev, models: data?.data || [] }));
-        return data;
+        try {
+            setLoading(true);
+            setError(null);
+            const { data } = await api.get('/ai-models');
+            setStore(prev => ({ ...prev, models: data?.data || [] }));
+            return data;
+        } catch (error) {
+            setError(error.response?.data?.message || error.message);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     const fetchSessionById = useCallback(async (sessionId) => {
-        const data = await apiCall(`/chat-sessions/${sessionId}?populate=*`);
+        try {
+            setLoading(true);
+            setError(null);
+            const { data } = await api.get(`/chat-sessions/${sessionId}?populate=*`);
 
-        const formattedMessages = data.data?.attributes?.chat_messages?.data?.map(item => ({
-            id: item.id,
-            type: item.attributes.sender_type === 'User' ? 'question' : 'answer',
-            content: item.attributes.sender_type === 'User'
-                ? { question: item.attributes.question }
-                : { response: item.attributes.response },
-            timestamp: item.attributes.createdAt
-        })) || [];
+            const formattedMessages = data.data?.attributes?.chat_messages?.data?.map(item => ({
+                id: item.id,
+                type: item.attributes.sender_type === 'User' ? 'question' : 'answer',
+                content: item.attributes.sender_type === 'User'
+                    ? { question: item.attributes.question }
+                    : { response: item.attributes.response },
+                timestamp: item.attributes.createdAt
+            })) || [];
 
-        setStore(prev => ({
-            ...prev,
-            currentSession: data.data,
-            currentSessionId: sessionId,
-            conversation: formattedMessages
-        }));
+            setStore(prev => ({
+                ...prev,
+                currentSession: data.data,
+                currentSessionId: sessionId,
+                conversation: formattedMessages
+            }));
 
-        router.push(`/?sessionId=${sessionId}`, { shallow: true });
-        return data;
+            router.push(`/?sessionId=${sessionId}`, { shallow: true });
+            return data;
+        } catch (error) {
+            setError(error.response?.data?.message || error.message);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
     }, [router]);
 
     const questionResponse = useCallback(async (data) => {
-        const response = await apiCall('/AskQuestions', 'post', data);
+        try {
+            setLoading(true);
+            setError(null);
+            const { data: response } = await api.post('/AskQuestions', data);
 
-        if (!data.sessionId) {
-            await fetchAllSessions();
-            if (response.data?.sessionId) {
-                await fetchSessionById(response.data.sessionId);
+            if (!data.sessionId) {
+                await fetchAllSessions();
+                if (response.data?.sessionId) {
+                    await fetchSessionById(response.data.sessionId);
+                }
             }
+
+            setStore(prev => ({
+                ...prev,
+                currentResponse: response.data,
+                conversation: [
+                    ...prev.conversation,
+                    { type: 'question', content: { question: data.question }, timestamp: new Date().toISOString() },
+                    { type: 'answer', content: { response: response.data }, timestamp: new Date().toISOString() }
+                ]
+            }));
+
+            return response;
+        } catch (error) {
+            setError(error.response?.data?.message || error.message);
+            throw error;
+        } finally {
+            setLoading(false);
         }
-
-        setStore(prev => ({
-            ...prev,
-            currentResponse: response.data,
-            conversation: [
-                ...prev.conversation,
-                { type: 'question', content: { question: data.question }, timestamp: new Date().toISOString() },
-                { type: 'answer', content: { response: response.data }, timestamp: new Date().toISOString() }
-            ]
-        }));
-
-        return response;
     }, [fetchAllSessions, fetchSessionById]);
 
-
-    // Add this method to your context provider
     const deleteSession = useCallback(async (sessionId) => {
         try {
-            await apiCall(`/chat-sessions/${sessionId}`, 'delete');
+            setLoading(true);
+            setError(null);
+            await api.delete(`/chat-sessions/${sessionId}`);
             setStore(prev => ({
                 ...prev,
                 allSessions: prev.allSessions.filter(s => s.id !== sessionId),
@@ -121,11 +151,12 @@ export const GlobalContextProvider = ({ children }) => {
             return true;
         } catch (error) {
             console.error("Error deleting session:", error);
+            setError(error.response?.data?.message || error.message);
             throw error;
+        } finally {
+            setLoading(false);
         }
     }, []);
-
-
 
     const createNewSession = useCallback(async () => {
         router.push('/');
@@ -140,11 +171,18 @@ export const GlobalContextProvider = ({ children }) => {
     // Initialize data
     useEffect(() => {
         const initialize = async () => {
-            await Promise.all([
-                fetchDatabases(),
-                fetchModels(),
-                fetchAllSessions()
-            ]);
+            try {
+                setLoading(true);
+                await Promise.all([
+                    fetchDatabases(),
+                    fetchModels(),
+                    fetchAllSessions()
+                ]);
+            } catch (error) {
+                setError(error.response?.data?.message || error.message);
+            } finally {
+                setLoading(false);
+            }
         };
         initialize();
     }, [fetchDatabases, fetchModels, fetchAllSessions]);
