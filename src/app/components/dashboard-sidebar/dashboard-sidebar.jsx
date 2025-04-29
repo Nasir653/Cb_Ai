@@ -74,7 +74,7 @@ export default function DashboardSidebar() {
                 <div className="h-full flex flex-col">
                     <nav className="flex h-full w-full flex-col px-3" aria-label="Chat history">
                         {/* Logo */}
-                        <div className="flex justify-between h-[80px] items-center">
+                        <div className="flex justify-between h-[80px] items-center xl:pt-3">
                             <Image
                                 src="/images/rodic-logo.png"
                                 alt="logo"
@@ -85,7 +85,7 @@ export default function DashboardSidebar() {
                         </div>
 
                         {/* New Chat Button */}
-                        <div className="mt-4 mb-2">
+                        <div className="mt-6 mb-4">
                             <button
                                 onClick={handleNewChat}
                                 disabled={loading}
@@ -111,7 +111,7 @@ export default function DashboardSidebar() {
 
                         {/* Conversations List */}
                         <div className="flex-1 overflow-y-auto">
-                            <h3 className="text-md font-medium mb-2 sticky top-0 bg-white py-2 z-10">
+                            <h3 className="text-md font-medium mb-2 sticky top-0 py-2 px-2 z-10">
                                 Conversations
                             </h3>
 
@@ -122,7 +122,7 @@ export default function DashboardSidebar() {
                                     </div>
                                 </div>
                             ) : (
-                                <ol className="space-y-1">
+                                <ol className="space-y-1 mt-3">
                                     {store.allSessions.map((session, idx) => {
                                         const { id, attributes } = session;
                                         return (

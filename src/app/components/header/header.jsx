@@ -105,7 +105,7 @@ export default function Header() {
 
 
             {/* Desktop header */}
-            <div className="dashboard-header draggable no-draggable-children top-0 p-3 flex items-center justify-between z-10 font-semibold motion-safe:transition-shadow  relative md:absolute left-0 right-0 bg-white desktop-header">
+            <div className="dashboard-header draggable no-draggable-children top-0 p-3 flex items-center justify-between z-10 font-semibold motion-safe:transition-shadow  relative md:absolute left-0 right-0 bg-white desktop-header md-5">
                 <div className="absolute start-1/2 ltr:-translate-x-1/2 rtl:translate-x-1/2"></div>
 
                 {/* Database dropdown */}
